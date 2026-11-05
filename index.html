@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153d35">
+  <meta name="description" content="직접 배치하고 연결하며 배우는 역학 실험실">
+  <title>Physics Sandbox — 자유 배치 실험실</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./app.js"></script>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">φ</span><div>Physics Sandbox<small>자유 배치 역학 실험실</small></div></div>
+  <span class="header-note">배치 → 연결 → 예측 → 실험</span>
+</header>
+
+<main>
+  <div class="intro">
+    <div><span class="eyebrow">BUILD YOUR OWN EXPERIMENT</span><h1>당신의 물리 문제를 만들어 보세요.</h1></div>
+    <button id="helpButton">조작 안내</button>
+  </div>
+
+  <section class="toolbar card" aria-label="실험 도구">
+    <div class="tools">
+      <button data-tool="select" class="active">↖ 선택·이동</button>
+      <button data-tool="body">＋ 물체</button>
+      <button data-tool="platform">＋ 수평 발판</button>
+      <button data-tool="ramp">＋ 경사면</button>
+      <button data-tool="fixed">＋ 고정 도르래</button>
+      <button data-tool="moving">＋ 이동 도르래</button>
+      <button data-tool="anchor">＋ 고정점</button>
+      <button data-tool="rope">⌁ 줄 연결</button>
+      <button data-tool="pan">✥ 화면 이동</button>
+    </div>
+    <div id="ropeActions" hidden>
+      <span id="routeText"></span>
+      <button id="finishRope" class="primary">줄 완성</button>
+      <button id="cancelRope">취소</button>
+    </div>
+    <p id="toolHint" class="small"></p>
+  </section>
+
+  <div class="layout">
+    <section class="work-column">
+      <div class="stage card">
+        <div class="stage-header">
+          <span><i class="status-dot"></i> <span id="status">실험 준비</span></span>
+          <div class="compact">
+            <button id="zoomOut" aria-label="축소">−</button>
+            <button id="zoomIn" aria-label="확대">＋</button>
+            <button id="fit">전체 보기</button>
+          </div>
+        </div>
+        <svg id="workspace" viewBox="0 0 1000 625"
+          role="application"
+          aria-label="물체와 발판을 배치하는 실험 작업 공간"></svg>
+        <div class="playbar">
+          <div class="compact">
+            <button id="play" class="primary">▶ 시작</button>
+            <button id="step">한 단계</button>
+            <button id="reset">↺ 초기화</button>
+          </div>
+          <div class="compact">
+            <label for="speed">속도</label>
+            <select id="speed">
+              <option value=".25">0.25×</option>
+              <option value=".5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+            </select>
+            <output id="clock">0.00 s</output>
+          </div>
+        </div>
+      </div>
+
+      <div id="notice" class="notice" role="status"></div>
+
+      <div class="metrics">
+        <div class="card"><span>선택한 물체</span><strong id="metricName">—</strong></div>
+        <div class="card"><span>속력</span><strong id="metricV">—</strong></div>
+        <div class="card"><span>가속도 크기</span><strong id="metricA">—</strong></div>
+        <div class="card"><span>알짜힘 크기</span><strong id="metricF">—</strong></div>
+      </div>
+
+      <section class="card learning">
+        <div class="tabs" role="tablist" aria-label="학습 도구">
+          <button data-tab="analysis" class="active" role="tab"
+            id="tab-analysis" aria-controls="analysis" aria-selected="true">힘과 풀이</button>
+          <button data-tab="graphs" role="tab"
+            id="tab-graphs" aria-controls="graphs" aria-selected="false">그래프</button>
+          <button data-tab="notes" role="tab"
+            id="tab-notes" aria-controls="notes" aria-selected="false">개념·모형</button>
+          <button data-tab="quiz" role="tab"
+            id="tab-quiz" aria-controls="quiz" aria-selected="false">퀴즈</button>
+          <button data-tab="checks" role="tab"
+            id="tab-checks" aria-controls="checks" aria-selected="false">검증</button>
+        </div>
+
+        <div id="analysis" class="tab-content" role="tabpanel" aria-labelledby="tab-analysis">
+          <div class="analysis-grid">
+            <div>
+              <h2>자유물체도</h2>
+              <svg id="fbd" viewBox="0 0 420 330"
+                role="img" aria-label="선택한 물체의 자유물체도"></svg>
+              <p class="small">초록: 장력 · 주황: 중력 · 파랑: 수직항력 · 분홍: 마찰 · 보라: 외력</p>
+            </div>
+            <div><h2>뉴턴 운동 법칙</h2><div id="bodyEquations"></div></div>
+          </div>
+          <details>
+            <summary>구속조건과 연립방정식 계산 과정</summary>
+            <div id="systemEquations"></div>
+          </details>
+        </div>
+
+        <div id="graphs" class="tab-content" role="tabpanel" aria-labelledby="tab-graphs" hidden>
+          <div class="row">
+            <h2>선택한 물체의 측정 기록</h2>
+            <select id="graphType" aria-label="그래프 물리량">
+              <option value="x">x 위치 (m)</option>
+              <option value="y" selected>y 위치 (m)</option>
+              <option value="vx">x 속도 (m/s)</option>
+              <option value="vy">y 속도 (m/s)</option>
+              <option value="speed">속력 (m/s)</option>
+              <option value="ax">x 가속도 (m/s²)</option>
+              <option value="ay">y 가속도 (m/s²)</option>
+              <option value="energy">역학적 에너지 (J)</option>
+            </select>
+          </div>
+          <svg id="chart" viewBox="0 0 800 300"
+            role="img" aria-label="시간에 따른 물리량 그래프"></svg>
+          <div id="energySummary"></div>
+          <button id="csv">전체 측정값 CSV 저장</button>
+          <p class="small">0.05초 간격, 최대 300초 기록. 그래프는 최근 15초를 표시합니다.</p>
+        </div>
+
+        <div id="notes" class="tab-content" role="tabpanel" aria-labelledby="tab-notes" hidden>
+          <h2>힘과 운동의 연결</h2>
+          <p>좌표는 오른쪽이 +x, 위쪽이 +y입니다. 중력은 아래쪽으로 작용하며, 알짜힘이 가속도를 결정합니다.</p>
+          <div class="formula">ΣFₓ = maₓ　　ΣFᵧ = maᵧ</div>
+          <p>고정된 발판의 윗면에서는 물체가 면을 뚫지 않도록 수직항력이 작용합니다.
+            마찰력은 접선 방향의 미끄러짐을 방해하며, 정지 상태에서는 필요한 만큼 작용합니다.</p>
+          <div class="formula">|f정지| ≤ μN　　|f운동| = μN</div>
+          <p>줄은 전체 경로 길이가 설정 길이보다 커지는 것을 막습니다. 줄이 느슨하면 장력은 0입니다.
+            이동 도르래를 지나는 두 줄 구간은 각각 도르래를 당기므로, 평행한 두 줄이라면 합력은 2T입니다.</p>
+          <div class="formula">L = Σ |rᵢ₊₁ − rᵢ|　　T ≥ 0</div>
+          <p>도르래 양옆 줄이 기울어져 있다면 2T를 단순히 위쪽으로 더하지 않고,
+            두 장력의 방향 벡터를 합합니다.</p>
+          <div class="formula">K = ½m(vₓ² + vᵧ²)　　U = mgy</div>
+
+          <h2>이 앱에서 사용하는 모형</h2>
+          <ul>
+            <li>물체는 회전하지 않는 질점입니다. 그림의 원 크기는 접촉 판정 반지름입니다.</li>
+            <li>발판과 경사면은 고정된 단면 지지대입니다. 윗면 접촉만 계산하며 옆면과 아랫면은 없습니다.</li>
+            <li>물체 사이 충돌은 반발계수 0인 병진 충돌입니다. 회전·구름 운동은 계산하지 않습니다.</li>
+            <li>정지·운동 마찰계수는 동일합니다. 두 물체 접촉 시 작은 마찰계수를 사용합니다.</li>
+            <li>줄은 질량·탄성·두께가 없습니다. 물체 및 도르래의 중심점을 잇습니다.</li>
+            <li>고정 도르래는 이상적인 방향 전환점입니다. 이동 도르래는 병진 질량을 가지며 회전 관성은 없습니다.</li>
+            <li>줄은 장애물과 충돌하지 않습니다. 실제 도르래 테두리를 감는 접선 경로는 계산하지 않습니다.</li>
+            <li>느슨한 줄이 팽팽해지는 순간과 물체 충돌은 비탄성입니다. 이때 운동에너지가 감소할 수 있습니다.</li>
+            <li>중복되거나 장력을 구할 수 없는 줄 구속은 실행 전에 검사합니다.</li>
+          </ul>
+          <p class="notice">유한한 도르래 반지름, 회전 관성, 탄성 줄, 매듭, 줄끼리의 접촉,
+            발판 측면 충돌, 유체 저항은 지원하지 않습니다.</p>
+        </div>
+
+        <div id="quiz" class="tab-content" role="tabpanel" aria-labelledby="tab-quiz" hidden>
+          <p id="quizProgress" class="eyebrow"></p>
+          <h2 id="quizQuestion"></h2>
+          <div id="quizChoices"></div>
+          <div class="compact">
+            <button id="quizSubmit" class="primary">정답 제출</button>
+            <button id="quizNext">다음 문제</button>
+          </div>
+          <p id="quizFeedback" class="notice" hidden></p>
+        </div>
+
+        <div id="checks" class="tab-content" role="tabpanel" aria-labelledby="tab-checks" hidden>
+          <h2>계산과 초기화 검증</h2>
+          <p>실험 상태를 바꾸지 않고 별도의 장면에서 검증합니다.
+            이 검증은 모든 브라우저와 모든 구조의 정확성을 보장하는 전체 테스트는 아닙니다.</p>
+          <button id="runChecks" class="primary">검증 실행</button>
+          <pre id="checkResults" aria-live="polite">아직 실행하지 않았습니다.</pre>
+        </div>
+      </section>
+    </section>
+
+    <aside class="side-column">
+      <section class="card pad">
+        <h2>실험 환경</h2>
+        <label class="field">중력가속도 g (m/s²)
+          <input id="gravity" type="number" min="0" max="30" step=".1" value="9.8">
+        </label>
+        <label class="check"><input id="showForces" type="checkbox" checked> 힘 화살표</label>
+        <label class="check"><input id="showVelocity" type="checkbox" checked> 속도 화살표</label>
+        <label class="check"><input id="showTrails" type="checkbox"> 운동 자취</label>
+        <p class="small">설정과 배치 변경 시 시간이 0으로 초기화됩니다.</p>
+      </section>
+
+      <section class="card pad">
+        <div class="row"><h2>선택 항목</h2><button id="deleteItem">삭제</button></div>
+        <div id="inspector"><p class="small">항목을 선택하세요.</p></div>
+        <h3>장면 목록</h3>
+        <div id="sceneList"></div>
+      </section>
+
+      <section class="card pad">
+        <h2>예제 실험</h2>
+        <select id="example" aria-label="예제 선택">
+          <option value="train">수평면과 두 물체</option>
+          <option value="incline">경사면과 마찰</option>
+          <option value="fall">자유낙하</option>
+          <option value="projectile">포물선 운동</option>
+          <option value="atwood">고정 도르래</option>
+          <option value="moving">이동 도르래</option>
+        </select>
+        <button id="loadExample">예제 불러오기</button>
+        <p class="small">현재 장면을 교체합니다. 보관하려면 먼저 JSON으로 저장하세요.</p>
+      </section>
+
+      <section class="card pad">
+        <h2>실험 보관</h2>
+        <div class="button-grid">
+          <button id="saveJSON">JSON 저장</button>
+          <button id="openJSON">JSON 불러오기</button>
+          <button id="saveLocal">브라우저에 저장</button>
+          <button id="loadLocal">브라우저에서 열기</button>
+        </div>
+        <input id="fileInput" type="file" accept=".json,application/json" hidden>
+        <p class="small">배치, 줄 연결, 초기 속도, 물리 조건을 저장합니다. 측정 기록은 CSV로 저장합니다.</p>
+      </section>
+    </aside>
+  </div>
+
+  <footer>Physics Sandbox · 외부 서버 없이 브라우저에서 실행</footer>
+</main>
+
+<dialog id="help">
+  <h2>실험을 만드는 방법</h2>
+  <ol>
+    <li>추가할 도구를 선택하고 작업 공간을 누릅니다.</li>
+    <li>선택·이동 도구에서 항목을 드래그합니다. 터치도 지원합니다.</li>
+    <li>선택 항목에서 질량, 위치, 외력, 초기 속도 등을 입력합니다.</li>
+    <li>줄 연결 도구로 시작 물체 → 도르래들 → 끝 물체 순서로 누르고 줄 완성을 누릅니다.</li>
+    <li>줄은 물체·이동 도르래·고정점에 묶을 수 있습니다. 경로 중간에는 도르래만 올 수 있습니다.</li>
+    <li>시작을 누르면 구조 검사 후 운동을 계산합니다.</li>
+    <li>잘 보이지 않으면 전체 보기를 누릅니다. 빈 공간은 화면 이동 도구로 드래그합니다.</li>
+  </ol>
+  <p>줄 연결 후 배치를 옮겨 줄이 너무 짧아지면 길이를 늘리거나 자동 길이를 누르세요.
+    항목 삭제는 연결된 줄도 함께 삭제합니다.</p>
+  <p class="small">키보드: 장면 목록으로 선택, 속성 입력으로 정밀 배치, Delete로 삭제,
+    Esc로 도구 취소. 입력란에서는 Delete가 글자를 지웁니다.</p>
+  <button id="closeHelp" class="primary">확인</button>
+</dialog>
+</body>
+  </html>
